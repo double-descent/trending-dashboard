@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending Topics Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-center text-gray-800">
+                <i class="fas fa-chart-line mr-2"></i>Trending Topics Dashboard
+            </h1>
+            <p class="text-center text-gray-600 mt-2">Discover what's trending across different categories</p>
+        </header>
+
+        <!-- Category Selection -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Select Category</h2>
+            <div class="flex flex-wrap gap-2">
+                <button class="category-btn bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-200" data-category="technology">
+                    <i class="fas fa-microchip mr-2"></i>Technology
+                </button>
+                <button class="category-btn bg-pink-500 text-white px-4 py-2 rounded-md hover:bg-pink-600 transition duration-200" data-category="social">
+                    <i class="fas fa-hashtag mr-2"></i>Social Media
+                </button>
+                <button class="category-btn bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-200" data-category="news">
+                    <i class="fas fa-newspaper mr-2"></i>News
+                </button>
+                <button class="category-btn bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-200" data-category="finance">
+                    <i class="fas fa-dollar-sign mr-2"></i>Finance
+                </button>
+                <button class="category-btn bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition duration-200" data-category="entertainment">
+                    <i class="fas fa-film mr-2"></i>Entertainment
+                </button>
+            </div>
+        </div>
+
+        <!-- Trend Display Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Trend List -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700" id="trend-title">Trending Topics</h2>
+                    <div class="divide-y" id="trend-list">
+                        <p class="text-gray-500 py-4 text-center">Select a category to see trending topics</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Trend Visualization</h2>
+                <div class="h-64">
+                    <canvas id="trendsChart"></canvas>
+                </div>
+                <p class="text-gray-500 text-sm mt-4 text-center" id="chart-info">Select a category to view trend data</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-gray-600 text-sm">
+            <p>Data refreshed hourly from various online sources</p>
+            <p class="mt-2">© 2023 Trends Dashboard</p>
+        </footer>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        const trendData = {
+            technology: [
+                { name: "Artificial Intelligence", value: 85, description: "AI advancements and new applications" },
+                { name: "Quantum Computing", value: 62, description: "Breakthroughs in quantum technology" },
+                { name: "5G Networks", value: 78, description: "Expansion of 5G infrastructure globally" },
+                { name: "Sustainable Tech", value: 56, description: "Green technology innovations" },
+                { name: "Cloud Computing", value: 70, description: "New cloud services and solutions" }
+            ],
+            social: [
+                { name: "#SummerVibes", value: 92, description: "Summer activities and vacation photos" },
+                { name: "TikTok Challenges", value: 86, description: "Viral dance and comedy challenges" },
+                { name: "Remote Work", value: 65, description: "Work from home experiences and tips" },
+                { name: "Instagram Reels", value: 78, description: "Short video content creators" },
+                { name: "Virtual Events", value: 59, description: "Online conferences and gatherings" }
+            ],
+            news: [
+                { name: "Global Politics", value: 88, description: "International relations and diplomacy" },
+                { name: "Climate Change", value: 75, description: "Environmental policies and impacts" },
+                { name: "Health Updates", value: 82, description: "Medical breakthroughs and public health" },
+                { name: "Economic Recovery", value: 73, description: "Financial markets and economic indicators" },
+                { name: "Education Reform", value: 61, description: "Changes in educational systems worldwide" }
+            ],
+            finance: [
+                { name: "Cryptocurrency", value: 80, description: "Bitcoin and altcoin market movements" },
+                { name: "Stock Market", value: 85, description: "Major indices and stock performance" },
+                { name: "Inflation Rates", value: 72, description: "Consumer price indices and economic impacts" },
+                { name: "Banking Services", value: 64, description: "Digital banking and fintech innovations" },
+                { name: "Housing Market", value: 76, description: "Real estate trends and property values" }
+            ],
+            entertainment: [
+                { name: "Streaming Shows", value: 88, description: "Popular series on major platforms" },
+                { name: "Music Releases", value: 84, description: "New albums and chart-topping songs" },
+                { name: "Celebrity News", value: 79, description: "Latest updates on famous personalities" },
+                { name: "Gaming Industry", value: 76, description: "Video game releases and e-sports" },
+                { name: "Film Premieres", value: 82, description: "New movies and box office results" }
+            ]
+        };
+
+        // Chart instance
+        let trendsChart;
+
+        // Update content based on selected category
+        function updateCategory(category) {
+            const trends = trendData[category];
+            const title = document.getElementById('trend-title');
+            const list = document.getElementById('trend-list');
+            const chartInfo = document.getElementById('chart-info');
+            
+            // Get category display name
+            const categoryNames = {
+                technology: "Technology",
+                social: "Social Media",
+                news: "News",
+                finance: "Finance",
+                entertainment: "Entertainment"
+            };
+            
+            // Update title
+            title.textContent = `Trending in ${categoryNames[category]}`;
+            
+            // Update list
+            list.innerHTML = '';
+            trends.forEach(trend => {
+                const item = document.createElement('div');
+                item.className = 'py-4';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-medium text-gray-800">${trend.name}</h3>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${trend.value}%</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mt-1">${trend.description}</p>
+                `;
+                list.appendChild(item);
+            });
+            
+            // Update chart
+            updateChart(trends);
+            chartInfo.textContent = `Trend popularity in ${categoryNames[category]} category`;
+        }
+
+        // Initialize and update chart
+        function updateChart(data) {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+            
+            // Prepare data
+            const labels = data.map(item => item.name);
+            const values = data.map(item => item.value);
+            
+            // Create new chart
+            trendsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Popularity (%)',
+                        data: values,
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Add event listeners to category buttons
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                updateCategory(category);
+                
+                // Update active button state
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-offset-2');
+                });
+                this.classList.add('ring-2', 'ring-offset-2');
+            });
+        });
+
+        // Set technology as default category when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            const techButton = document.querySelector('[data-category="technology"]');
+            techButton.click();
+        });
+    </script>
+</body>
+</html>
